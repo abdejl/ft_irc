@@ -40,3 +40,15 @@ std::string Command::getPrefix() const
 {
     return(this->_prefix);
 }
+std::vector<std::string> splitByComma(std::string str)
+{
+    std::vector<std::string> result;
+    size_t pos = 0;
+    while ((pos = str.find(',')) != std::string::npos)
+    {
+        result.push_back(str.substr(0, pos));
+        str.erase(0, pos + 1);
+    }
+    result.push_back(str);
+    return result;
+}

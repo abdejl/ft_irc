@@ -1,6 +1,9 @@
 #include "Client.hpp"
 
+Client::Client() : _isAuthenticated(false), _isRegistered(false)
+{
 
+}
 void Client::setNickName(std::string nickname)
 {
    this->_nickName = nickname;  
@@ -38,12 +41,73 @@ std::string Server::getPassword() const
 
 bool Client::getIsAuthenticated() const
 {
-   if(this->_isAuthenticated) 
-        return (true);
-    return(false);
+    return (this->_isAuthenticated);
 }
 
-void Client::setPassedPassword(bool isregistered)
+void Client::setPassedPassword(bool status)
 {
-    this->_isAuthenticated = true;  
+    this->_isAuthenticated = status;  
+}
+
+void Client::setIsRegistered(bool status)
+{
+    this->_isRegistered = status;
+}
+
+bool Client::getIsRegistered() const
+{
+    return this->_isRegistered;
+}
+
+void Client::setRealName(std::string realname) {
+    this->_realName = realname;
+}
+void Client::setFd(int fd)
+{
+    this->_fd = fd;
+}
+
+int Client::getFd() const
+{
+    return(this->_fd);
+}
+
+bool Client::checkIsValidNickname(const std::string& nick)
+{
+    std::string forbidden = " !@#$%^&*()+-";
+    if (nick.find_first_of(forbidden) != std::string::npos)
+    {
+        return false;
+    }
+
+    // 2. IRC rule: Nickname cannot start with a digit or a hyphen
+    if (isdigit(nick[0]) || nick[0] == '-')
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool Server::isNickInUse(const std::string& nick)
+{
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i].getNickName() == nick)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+Client* Server::getClientByNick(const std::string& nick)
+{
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i].getNickName() == nick)
+        {
+            return &_clients[i]; // Return a pointer to the existing client
+        }
+    }
+    return NULL; // Return NULL if no user with that nickname is found
 }

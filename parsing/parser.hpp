@@ -22,6 +22,7 @@ public:
     std::string getPrefix() const;
     // command parseCommand(const std::string &line);
 };
+std::vector<std::string> splitByComma(std::string str);
 
 
 #endif

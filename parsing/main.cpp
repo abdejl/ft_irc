@@ -3,12 +3,15 @@
 #include <vector>
 #include <string>
 #include "Client.hpp"
+#include "cmdDispatcher.hpp"
 
-std::vector<std::string> extractCommands(std::string &buffer) {
+std::vector<std::string> extractCommands(std::string &buffer)
+{
     std::vector<std::string> commands;
     size_t pos;
 
-    while ((pos = buffer.find("\r\n")) != std::string::npos) {
+    while ((pos = buffer.find("\r\n")) != std::string::npos)
+    {
         commands.push_back(buffer.substr(0, pos));
         buffer.erase(0, pos + 2);
     }
@@ -69,49 +72,44 @@ std::vector<std::string> extractCommands(std::string &buffer) {
     return cmd;
 }
 
+
 int main(int argc, char **argv) 
 {
-    std::string input;
-    std::vector<std::string> cmds; 
-    std::vector<std::string> newcmds;
-    // command args;
-    std::string buffer;
+    if (argc != 3)
+    { 
+        std::cout << "Usage: ./ircserv <port> <password>" << std::endl;
+        return 1;
+    }
 
     Server server;
     server.setPort(argv[1]);
     server.setPassword(argv[2]);
-    if(argc == 2)
-    {
-        while (true)
-        {
-            std::getline(std::cin, input);
-
-            if (input == "exit")
-                break;
-
-            buffer += input + "\r\n";
-
-            std::vector<std::string> newcmds = extractCommands(buffer);
-
-
-            for (size_t i = 0; i < newcmds.size(); i++)
-            {
-                cmds.push_back(newcmds[i]);
-            }
-            for (size_t i = 0; i < newcmds.size(); i++) 
-            {
-                Command c = parseCommand(newcmds[i]);
-                std::cout << "CMD: " << c.getCommandName() << "\n";
-
-                for (size_t j = 0; j < c.getParams().size(); j++)
-                    std::cout << "param: [" << c.getParams()[j] << "]\n";
-
-                std::cout << "trailing: [" << c.getMessage() << "]\n";
-
-                std::cout << "------\n";
-            }
     
+    Client client;
+    client.setFd(1); // Standard output for testing
+    
+    commandDispatcher dispatcher;
+    std::string buffer;
+    std::string input;
+
+    std::cout << "--- IRC Parser Debug Mode ---" << std::endl;
+    std::cout << "Password set to: " << server.getPassword() << std::endl;
+    std::cout << "Enter IRC commands (e.g., PASS " << argv[2] << "):" << std::endl;
+
+    while (std::getline(std::cin, input)) 
+    {
+        if (input == "exit") break;
+
+        // Simulate network behavior by adding \r\n
+        buffer += input + "\r\n"; 
+        std::vector<std::string> lines = extractCommands(buffer);
+
+        for (size_t i = 0; i < lines.size(); i++) 
+        {
+            Command cmd = parseCommand(lines[i]);
+            //Pass the server by reference so handlers can see the password
+            dispatcher.execute(client, cmd, server); 
         }
     }
-    std::cout << "Wrong Number Of Arguments" << std::endl;
+    return 0;
 }
