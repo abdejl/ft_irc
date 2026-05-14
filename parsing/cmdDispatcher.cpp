@@ -46,6 +46,7 @@ void commandDispatcher::handleNick(Client &client, const Command &cmd, Server &s
     {
         std::string msg = "432 " + newNick + " :Erroneous nickname\r\n";
         send(client.getFd(), msg.c_str(), msg.length(), 0);
+        std::cout << "TEST HANDLENICK ERRONEOUS NICKNAME" << std::endl;
         return;
     }
 
@@ -56,6 +57,12 @@ void commandDispatcher::handleNick(Client &client, const Command &cmd, Server &s
         send(client.getFd(), msg.c_str(), msg.length(), 0);
         return;
     }
+    // if (server.isNickInUse(newNick, client.getFd()))
+    // {
+    //     std::string msg = "433 * " + newNick + " :Nickname is already in use\r\n";
+    //     send(client.getFd(), msg.c_str(), msg.length(), 0);
+    //     return;
+    // }
     // 5. Success: Update the nickname
     client.setNickName(newNick);
     std::cout << "Client " << client.getFd() << " is now known as " << newNick << std::endl;

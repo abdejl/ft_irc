@@ -28,7 +28,8 @@ public:
     bool getIsRegistered() const;
     
     void setRealName(std::string realname);
-    std::string getRealName() const;bool checkIsValidNickname(const std::string& nick);
+    std::string getRealName() const;
+    bool checkIsValidNickname(const std::string& nick);
 };
 
 class Server{
@@ -41,7 +42,9 @@ public:
     void setPort(std::string port);
     std::string getPassword() const;
     bool isNickInUse(const std::string& nick);
+    // bool isNickInUse(const std::string& nick, int excludeFd);
     Client* getClientByNick(const std::string& nick);
+    void addClient(const Client& client);
 };
 
 #endif

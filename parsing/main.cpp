@@ -2,6 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>  // for std::transform
+#include <cctype>     // for ::toupper
 #include "Client.hpp"
 #include "cmdDispatcher.hpp"
 
@@ -32,12 +34,15 @@ std::vector<std::string> extractCommands(std::string &buffer)
         if(prefix_end != std::string::npos)
             cmd.setPrefix(line.substr(1, prefix_end - 1));
         i = prefix_end;
+        while (i < line.size() && line[i] == ' ')
+            i++;
         std::cout << "PREFIX: [" << cmd.getPrefix() << "]\n";
     }
     while (i < line.size() && line[i] != ' ')
     {
         commandToBuild += line[i++];
     }
+    std::transform(commandToBuild.begin(), commandToBuild.end(), commandToBuild.begin(), ::toupper);
     cmd.setCommandName(commandToBuild);
 
     // skip spaces
@@ -55,8 +60,6 @@ std::vector<std::string> extractCommands(std::string &buffer)
             messageToBuild = line.substr(i + 1);
             break;
         }
-
-
         std::string param;
         while (i < line.size() && line[i] != ' ')
         {
@@ -113,3 +116,4 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+

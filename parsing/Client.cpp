@@ -75,6 +75,8 @@ int Client::getFd() const
 bool Client::checkIsValidNickname(const std::string& nick)
 {
     std::string forbidden = " !@#$%^&*()+-";
+    if (nick.empty())
+        return false;
     if (nick.find_first_of(forbidden) != std::string::npos)
     {
         return false;
@@ -100,6 +102,8 @@ bool Server::isNickInUse(const std::string& nick)
     }
     return false;
 }
+
+
 Client* Server::getClientByNick(const std::string& nick)
 {
     for (size_t i = 0; i < _clients.size(); i++)
@@ -110,4 +114,13 @@ Client* Server::getClientByNick(const std::string& nick)
         }
     }
     return NULL; // Return NULL if no user with that nickname is found
+}
+
+// void Server::addClient(const Client& client)
+// {
+//     _clients.push_back(client);
+// }
+std::string Client::getRealName() const
+{
+    return(this->_realName);
 }
