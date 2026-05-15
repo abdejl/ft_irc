@@ -5,15 +5,16 @@
 #include <vector>
 #include <string>
 #include <cstdlib>
+#include "../parsing/Client.hpp"
 
 
-class Client
-{
-    public:
-        int socket_fd;
-        std::string getNickName();
-        void send(std::string Message);
-};
+// class Client
+// {
+//     public:
+//         int socket_fd;
+//         std::string getNickName();
+//         void send(std::string Message);
+// };
 
 class Channel
 {
@@ -75,7 +76,7 @@ class Channel
 
         // commands
         void kickClient(Channel &channel, Client *sender, Client *target);
-        void ChangeTopin(Channel &channel, Client *sender, std::string topic);
+        void ChangeTopic(Channel &channel, Client *sender, std::string topic);
         void inviteToChannel(Channel &channel, Client *sender, Client *target);
 
         // utils

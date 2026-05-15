@@ -1,5 +1,6 @@
 #include "cmdDispatcher.hpp"
 #include "parser.hpp"
+#include "../channel/channel.hpp"
 
 #include "cmdDispatcher.hpp"
 #include <sys/socket.h> // For send()
@@ -174,7 +175,12 @@ void commandDispatcher::handleJoin(Client &client, const Command &cmd)
             send(client.getFd(), err_msg.c_str(), err_msg.length(), 0);
             continue;
         }
-
+        Channel channel;
+        if (channel.isEmpty())
+        {
+            std::cout << "TEST CHANNEL" << std::endl;
+            channel.addOperator(&client);
+        }
         // YAHYA PART:
         // ZIYR M3ANA:
     }

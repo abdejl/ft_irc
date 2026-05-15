@@ -3,8 +3,10 @@ CC      = c++
 FLAGS   = -Wall -Wextra -Werror -std=c++98
 
 SRC_DIR = parsing
+SRC_DIR_CHANN = channel
 SRCS    = $(SRC_DIR)/main.cpp $(SRC_DIR)/parser.cpp \
-          $(SRC_DIR)/Client.cpp $(SRC_DIR)/cmdDispatcher.cpp
+          $(SRC_DIR)/Client.cpp $(SRC_DIR)/cmdDispatcher.cpp\
+		  $(SRC_DIR_CHANN)/channel.cpp
 
 OBJS    = $(SRCS:.cpp=.o)
 

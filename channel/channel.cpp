@@ -1,4 +1,5 @@
 #include "channel.hpp"
+#include <sys/socket.h> // For send()
 
 
 Channel::Channel()
@@ -24,7 +25,7 @@ bool Channel::isOperator(Client *client)
 {
     for (std::vector<Client*>::iterator it = _vOperator.begin(); it != _vOperator.end(); it++)
     {
-        if ((*it)->socket_fd == client->socket_fd)
+        if ((*it)->getFd() == client->getFd())
             return true;
     }
     return false;
@@ -53,17 +54,21 @@ void Channel::removeClient(Client *client, bool printMSG)
 
 void Channel::broadcast(std::string message, Client *sender)
 {
-    std::string newMessage = "PRIVMSG #" + sender->getNickName() + _name + " :" + message;
+    std::string newMessage = ":" + sender->getNickName() + " PRIVMSG " + _name + " :" + message;
 
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
     {
-        if ((*it)->socket_fd != sender->socket_fd)
-            (*it)->send(newMessage);
+        if ((*it)->getFd() != sender->getFd())
+        { 
+            send((*sender).getFd(), newMessage.c_str(), newMessage.length(), 0);
+            // (*it)->send(newMessage);
+        }
     }
 }
 
 void Channel::addOperator(Client *client)
 {
+    std::cout << "TEST ADDOPERATOR" << std::endl;
     _vOperator.push_back(client); 
 }
 
@@ -197,7 +202,9 @@ void Channel::kickClient(Channel &channel, Client *sender, Client *target)
 {
     if (!channel.isOperator(sender))
     {
-        sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
+        send(sender->getFd(), msg.c_str(), msg.length(), 0);
+        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
         return;
     }
     channel.broadcast(":" + sender->getNickName() + " KICK #" + channel._name + " " + target->getNickName(), sender);
@@ -210,11 +217,13 @@ bool Channel::isRestrictedTopic()
     return _topicRestricted;
 }
 
-void Channel::ChangeTopin(Channel &channel, Client *sender, std::string topic)
+void Channel::ChangeTopic(Channel &channel, Client *sender, std::string topic)
 {
     if (isRestrictedTopic() && !isOperator(sender))
     {
-        sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
+        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        send(sender->getFd(), msg.c_str(), msg.length(), 0);
     }
     channel.broadcast(":" + sender->getNickName() + " TOPIC #" + channel._name + " :" + topic,
                   sender);
@@ -225,11 +234,16 @@ void Channel::inviteToChannel(Channel &channel,Client *sender, Client *target)
 {
     if (!channel.isOperator(sender))
     {
-        sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = "482 #" + channel.getName() + " : You're not channel operator";
+        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        send(sender->getFd(), msg.c_str(), msg.length(), 0);
         return;
     }
     channel.inviteClient(target);
-    target->send(":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name); 
+
+    std::string msg = ":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name;
+    send(sender->getFd(), msg.c_str(), msg.length(), 0);
+    // target->send(":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name); 
 }
 
 void Join(Channel &channel, Client *client)

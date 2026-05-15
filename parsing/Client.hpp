@@ -30,6 +30,7 @@ public:
     void setRealName(std::string realname);
     std::string getRealName() const;
     bool checkIsValidNickname(const std::string& nick);
+    // void send(std::string Message);
 };
 
 class Server{
