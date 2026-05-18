@@ -34,6 +34,11 @@ void Server::setPort(std::string port)
     this->_port = port;
 }
 
+std::string Server::getPort() const
+{
+    return _port;
+}
+
 std::string Server::getPassword() const
 {
     return(this->_password);
@@ -116,11 +121,48 @@ Client* Server::getClientByNick(const std::string& nick)
     return NULL; // Return NULL if no user with that nickname is found
 }
 
-// void Server::addClient(const Client& client)
-// {
-//     _clients.push_back(client);
-// }
+void Server::addClient(const Client& client)
+{
+    _clients.push_back(client);
+}
 std::string Client::getRealName() const
 {
     return(this->_realName);
 }
+
+std::string Client::getBuffer() const
+{
+    return _buffer;
+}
+
+
+std::string Server::getBuffer(int i) const
+{
+    return _clients[i].getBuffer();
+}
+
+
+void Client::setBuffer(std::string buffer)
+{
+    _buffer = buffer;
+}
+
+void    Server::FillClient(int Fd, std::string Text)
+{
+    for (size_t i = 0; i < _clients.size(); i++)
+    {
+        if (_clients[i].getFd() == Fd)
+        {
+            if (_clients[i].getBuffer().find("\n") != std::string::npos
+                || _clients[i].getBuffer().find("\r\n") != std::string::npos)
+            {
+                std::cout << _clients[i].getBuffer() << " fd = " << Fd << std::endl;
+                _clients[i].setBuffer("");
+            }
+            _clients[i].setBuffer(_clients[i].getBuffer() + Text);
+            break;
+        }
+    }
+
+}
+

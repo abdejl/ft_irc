@@ -18,6 +18,7 @@ public:
     Client();
     void setNickName(std::string nickname);
     void setUserName(std::string username);
+    void setBuffer(std::string buffer);
     std::string getNickName() const;
     std::string getUserName() const;
     bool getIsAuthenticated() const;
@@ -26,6 +27,7 @@ public:
     int getFd() const;
     void setIsRegistered(bool status);
     bool getIsRegistered() const;
+    std::string getBuffer() const;
     
     void setRealName(std::string realname);
     std::string getRealName() const;
@@ -41,11 +43,14 @@ private:
 public:
     void setPassword(std::string pass);
     void setPort(std::string port);
+    std::string getBuffer(int i) const;
+    std::string getPort()const;
     std::string getPassword() const;
     bool isNickInUse(const std::string& nick);
     // bool isNickInUse(const std::string& nick, int excludeFd);
     Client* getClientByNick(const std::string& nick);
-    void addClient(const Client& client);
+    void    addClient(const Client& client);
+    void    FillClient(int Fd, std::string Text);
 };
 
 #endif

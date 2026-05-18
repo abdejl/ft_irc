@@ -181,8 +181,6 @@ void commandDispatcher::handleJoin(Client &client, const Command &cmd)
             std::cout << "TEST CHANNEL" << std::endl;
             channel.addOperator(&client);
         }
-        // YAHYA PART:
-        // ZIYR M3ANA:
     }
 }
 
@@ -212,7 +210,7 @@ void commandDispatcher::handlePrivmsg(Client &client, const Command &cmd, Server
     // 3. Routing the message
     if (target[0] == '#' || target[0] == '&')
     {
-        // Target is a CHANNEL
+        // Target is a CHANNELkj
         // salam '-'
         // YAHYA your part is here...
     }

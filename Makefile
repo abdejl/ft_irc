@@ -1,12 +1,14 @@
 NAME    = ft_irc
 CC      = c++
-FLAGS   = -Wall -Wextra -Werror -std=c++98
+FLAGS   = -Wall -Wextra -Werror -std=c++98 -g
 
 SRC_DIR = parsing
 SRC_DIR_CHANN = channel
+SRC_DIR_SERVER = server
 SRCS    = $(SRC_DIR)/main.cpp $(SRC_DIR)/parser.cpp \
           $(SRC_DIR)/Client.cpp $(SRC_DIR)/cmdDispatcher.cpp\
-		  $(SRC_DIR_CHANN)/channel.cpp
+		  $(SRC_DIR_CHANN)/channel.cpp\
+		  $(SRC_DIR_SERVER)/server.cpp
 
 OBJS    = $(SRCS:.cpp=.o)
 

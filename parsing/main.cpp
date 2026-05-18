@@ -6,6 +6,7 @@
 #include <cctype>     // for ::toupper
 #include "Client.hpp"
 #include "cmdDispatcher.hpp"
+#include "../server/server.hpp"
 
 std::vector<std::string> extractCommands(std::string &buffer)
 {
@@ -20,8 +21,7 @@ std::vector<std::string> extractCommands(std::string &buffer)
     return commands;
 }
 
-
- Command parseCommand(const std::string &line) 
+Command parseCommand(const std::string &line) 
 {
     Command cmd;
     size_t i = 0;
@@ -83,37 +83,42 @@ int main(int argc, char **argv)
         std::cout << "Usage: ./ircserv <port> <password>" << std::endl;
         return 1;
     }
+    // client[i] = "input";
+    Client              client;
+    Server              server;
+    commandDispatcher   dispatcher;
+    std::string         buffer;// must removed
 
-    Server server;
+
     server.setPort(argv[1]);
     server.setPassword(argv[2]);
     
-    Client client;
     client.setFd(1); // Standard output for testing
     
-    commandDispatcher dispatcher;
-    std::string buffer;
-    std::string input;
+    
+
 
     std::cout << "--- IRC Parser Debug Mode ---" << std::endl;
     std::cout << "Password set to: " << server.getPassword() << std::endl;
     std::cout << "Enter IRC commands (e.g., PASS " << argv[2] << "):" << std::endl;
 
-    while (std::getline(std::cin, input)) 
+    CoreServer  ServerInfo(server.getPort());
+    if (ServerInfo.PrepareServerSocket() != 1)
+        return 1;
+    while (true) 
     {
-        if (input == "exit") break;
+        // if (input == "exit") break; check what you must do
 
-        // Simulate network behavior by adding \r\n
-        buffer += input + "\r\n"; 
+        if (ServerInfo.Receive(server) == -1)
+            return 1;
         std::vector<std::string> lines = extractCommands(buffer);
 
-        for (size_t i = 0; i < lines.size(); i++) 
+        for (size_t i = 0; i < lines.size(); i++)
         {
             Command cmd = parseCommand(lines[i]);
             //Pass the server by reference so handlers can see the password
-            dispatcher.execute(client, cmd, server); 
+            dispatcher.execute(client, cmd, server);
         }
     }
     return 0;
 }
-

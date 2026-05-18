@@ -204,7 +204,7 @@ void Channel::kickClient(Channel &channel, Client *sender, Client *target)
     {
         std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        // sender->send("481 #" + channel.getName() + " :You're not channel operator");
         return;
     }
     channel.broadcast(":" + sender->getNickName() + " KICK #" + channel._name + " " + target->getNickName(), sender);
