@@ -60,7 +60,7 @@ void Channel::broadcast(std::string message, Client *sender)
     {
         if ((*it)->getFd() != sender->getFd())
         { 
-            send((*sender).getFd(), newMessage.c_str(), newMessage.length(), 0);
+            send((*it)->getFd(), newMessage.c_str(), newMessage.length(), 0);
             // (*it)->send(newMessage);
         }
     }
@@ -280,4 +280,13 @@ bool Channel::hasDuplicateNickName(std::string nickname)
             return true;
     }
     return false;
+}
+
+
+Channel* Server::getChannelByName(const std::string& name)
+{
+    (void)name;
+    //for testing only 
+    //sawb dialk
+    return NULL;
 }

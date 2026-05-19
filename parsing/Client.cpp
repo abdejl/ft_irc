@@ -64,7 +64,8 @@ bool Client::getIsRegistered() const
     return this->_isRegistered;
 }
 
-void Client::setRealName(std::string realname) {
+void Client::setRealName(std::string realname) 
+{
     this->_realName = realname;
 }
 void Client::setFd(int fd)
@@ -86,8 +87,6 @@ bool Client::checkIsValidNickname(const std::string& nick)
     {
         return false;
     }
-
-    // 2. IRC rule: Nickname cannot start with a digit or a hyphen
     if (isdigit(nick[0]) || nick[0] == '-')
     {
         return false;
@@ -108,17 +107,16 @@ bool Server::isNickInUse(const std::string& nick)
     return false;
 }
 
-
 Client* Server::getClientByNick(const std::string& nick)
 {
     for (size_t i = 0; i < _clients.size(); i++)
     {
         if (_clients[i].getNickName() == nick)
         {
-            return &_clients[i]; // Return a pointer to the existing client
+            return &_clients[i];
         }
     }
-    return NULL; // Return NULL if no user with that nickname is found
+    return NULL;
 }
 
 void Server::addClient(const Client& client)
@@ -141,10 +139,19 @@ std::string Server::getBuffer(int i) const
     return _clients[i].getBuffer();
 }
 
+std::string& Client::getBufferRef()
+{
+    return _buffer;
+}
 
 void Client::setBuffer(std::string buffer)
 {
     _buffer = buffer;
+}
+
+std::vector<Client>& Server::getClients()
+{
+    return _clients;
 }
 
 void    Server::FillClient(int Fd, std::string Text)
@@ -156,13 +163,18 @@ void    Server::FillClient(int Fd, std::string Text)
             if (_clients[i].getBuffer().find("\n") != std::string::npos
                 || _clients[i].getBuffer().find("\r\n") != std::string::npos)
             {
-                std::cout << _clients[i].getBuffer() << " fd = " << Fd << std::endl;
                 _clients[i].setBuffer("");
             }
             _clients[i].setBuffer(_clients[i].getBuffer() + Text);
             break;
         }
     }
-
 }
 
+void Server::processChannelJoin(Client &client, std::string channelName, std::string key)
+{
+    (void)client;
+    (void)channelName;
+    (void)key;
+    // for testing only
+}

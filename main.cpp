@@ -1,12 +1,12 @@
-#include "parser.hpp"
+#include "parsing/parser.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>  // for std::transform
-#include <cctype>     // for ::toupper
-#include "Client.hpp"
-#include "cmdDispatcher.hpp"
-#include "../server/server.hpp"
+#include <algorithm>
+#include <cctype>
+#include "parsing/Client.hpp"
+#include "parsing/cmdDispatcher.hpp"
+#include "server/server.hpp"
 
 std::vector<std::string> extractCommands(std::string &buffer)
 {
@@ -27,7 +27,6 @@ Command parseCommand(const std::string &line)
     size_t i = 0;
     std::string commandToBuild;
 
-    // 1. Get command
     if(line[0] == ':')
     {
         size_t prefix_end = line.find(' ');
@@ -45,11 +44,9 @@ Command parseCommand(const std::string &line)
     std::transform(commandToBuild.begin(), commandToBuild.end(), commandToBuild.begin(), ::toupper);
     cmd.setCommandName(commandToBuild);
 
-    // skip spaces
     while (i < line.size() && line[i] == ' ')
         i++;
 
-    // 2. Parse params + trailing message
     std::string messageToBuild;
     std::vector<std::string> paramToBuild;
 
@@ -83,23 +80,13 @@ int main(int argc, char **argv)
         std::cout << "Usage: ./ircserv <port> <password>" << std::endl;
         return 1;
     }
-    // client[i] = "input";
     Client              client;
     Server              server;
     commandDispatcher   dispatcher;
-    std::string         buffer;// must removed
-
 
     server.setPort(argv[1]);
     server.setPassword(argv[2]);
-    
-    client.setFd(1); // Standard output for testing
-    
-    
 
-
-    std::cout << "--- IRC Parser Debug Mode ---" << std::endl;
-    std::cout << "Password set to: " << server.getPassword() << std::endl;
     std::cout << "Enter IRC commands (e.g., PASS " << argv[2] << "):" << std::endl;
 
     CoreServer  ServerInfo(server.getPort());
@@ -107,17 +94,17 @@ int main(int argc, char **argv)
         return 1;
     while (true) 
     {
-        // if (input == "exit") break; check what you must do
-
         if (ServerInfo.Receive(server) == -1)
             return 1;
-        std::vector<std::string> lines = extractCommands(buffer);
-
-        for (size_t i = 0; i < lines.size(); i++)
+        for (size_t i = 0; i < server.getClients().size(); i++)
         {
-            Command cmd = parseCommand(lines[i]);
-            //Pass the server by reference so handlers can see the password
-            dispatcher.execute(client, cmd, server);
+            std::string &clientBuffer = server.getClients()[i].getBufferRef();
+            std::vector<std::string> lines = extractCommands(clientBuffer); 
+            for (size_t j = 0; j < lines.size(); j++)
+            {
+                Command cmd = parseCommand(lines[j]);
+                dispatcher.execute(server.getClients()[i], cmd, server);
+            }
         }
     }
     return 0;
