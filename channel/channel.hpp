@@ -42,6 +42,7 @@ class Channel
         int         getUserLimit();
 
         // setters
+        void setName(std::string name);
         void setTopic(std::string topic);
         void setTopicRestricted(bool value);
         void setInviteOnly(bool value);

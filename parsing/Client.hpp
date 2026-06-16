@@ -2,8 +2,8 @@
 #define CLIENT_HPP
 
 #include "parser.hpp"
-
-
+#include <map>
+class Channel;
 class Client{
 
 private:
@@ -13,11 +13,12 @@ private:
     std::string _userName;
     bool _isAuthenticated;
     std::string _realName;
-    bool _isRegistered;        // This tracks if PASS + NICK + USER are done
+    bool _isRegistered;
 public:
     Client();
     void setNickName(std::string nickname);
     void setUserName(std::string username);
+    void setBuffer(std::string buffer);
     std::string getNickName() const;
     std::string getUserName() const;
     bool getIsAuthenticated() const;
@@ -26,11 +27,11 @@ public:
     int getFd() const;
     void setIsRegistered(bool status);
     bool getIsRegistered() const;
-    
+    std::string getBuffer() const;   
     void setRealName(std::string realname);
     std::string getRealName() const;
     bool checkIsValidNickname(const std::string& nick);
-    // void send(std::string Message);
+    std::string& getBufferRef();
 };
 
 class Server{
@@ -38,14 +39,21 @@ private:
     std::string _password;
     std::string _port;
     std::vector<Client> _clients;
+    std::map<std::string, Channel*> _channels;
 public:
     void setPassword(std::string pass);
     void setPort(std::string port);
+    std::string getBuffer(int i) const;
+    std::string getPort()const;
     std::string getPassword() const;
     bool isNickInUse(const std::string& nick);
-    // bool isNickInUse(const std::string& nick, int excludeFd);
     Client* getClientByNick(const std::string& nick);
-    void addClient(const Client& client);
+    void    addClient(const Client& client);
+    void    FillClient(int Fd, std::string Text);
+    std::vector<Client>& getClients();
+    Channel* getChannelByName(const std::string& name);
+    Channel* getOrCreateChannel(const std::string& name);
+    void processChannelJoin(Client &client, std::string channelName, std::string key);
 };
 
 #endif

@@ -1,11 +1,12 @@
-#include "parser.hpp"
+#include "parsing/parser.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>  // for std::transform
-#include <cctype>     // for ::toupper
-#include "Client.hpp"
-#include "cmdDispatcher.hpp"
+#include <algorithm>
+#include <cctype>
+#include "parsing/Client.hpp"
+#include "parsing/cmdDispatcher.hpp"
+#include "server/server.hpp"
 
 std::vector<std::string> extractCommands(std::string &buffer)
 {
@@ -20,14 +21,12 @@ std::vector<std::string> extractCommands(std::string &buffer)
     return commands;
 }
 
-
- Command parseCommand(const std::string &line) 
+Command parseCommand(const std::string &line) 
 {
     Command cmd;
     size_t i = 0;
     std::string commandToBuild;
 
-    // 1. Get command
     if(line[0] == ':')
     {
         size_t prefix_end = line.find(' ');
@@ -45,11 +44,9 @@ std::vector<std::string> extractCommands(std::string &buffer)
     std::transform(commandToBuild.begin(), commandToBuild.end(), commandToBuild.begin(), ::toupper);
     cmd.setCommandName(commandToBuild);
 
-    // skip spaces
     while (i < line.size() && line[i] == ' ')
         i++;
 
-    // 2. Parse params + trailing message
     std::string messageToBuild;
     std::vector<std::string> paramToBuild;
 
@@ -83,37 +80,32 @@ int main(int argc, char **argv)
         std::cout << "Usage: ./ircserv <port> <password>" << std::endl;
         return 1;
     }
+    Client              client;
+    Server              server;
+    commandDispatcher   dispatcher;
 
-    Server server;
     server.setPort(argv[1]);
     server.setPassword(argv[2]);
-    
-    Client client;
-    client.setFd(1); // Standard output for testing
-    
-    commandDispatcher dispatcher;
-    std::string buffer;
-    std::string input;
 
-    std::cout << "--- IRC Parser Debug Mode ---" << std::endl;
-    std::cout << "Password set to: " << server.getPassword() << std::endl;
     std::cout << "Enter IRC commands (e.g., PASS " << argv[2] << "):" << std::endl;
 
-    while (std::getline(std::cin, input)) 
+    CoreServer  ServerInfo(server.getPort());
+    if (ServerInfo.PrepareServerSocket() != 1)
+        return 1;
+    while (true) 
     {
-        if (input == "exit") break;
-
-        // Simulate network behavior by adding \r\n
-        buffer += input + "\r\n"; 
-        std::vector<std::string> lines = extractCommands(buffer);
-
-        for (size_t i = 0; i < lines.size(); i++) 
+        if (ServerInfo.Receive(server) == -1)
+            return 1;
+        for (size_t i = 0; i < server.getClients().size(); i++)
         {
-            Command cmd = parseCommand(lines[i]);
-            //Pass the server by reference so handlers can see the password
-            dispatcher.execute(client, cmd, server); 
+            std::string &clientBuffer = server.getClients()[i].getBufferRef();
+            std::vector<std::string> lines = extractCommands(clientBuffer); 
+            for (size_t j = 0; j < lines.size(); j++)
+            {
+                Command cmd = parseCommand(lines[j]);
+                dispatcher.execute(server.getClients()[i], cmd, server);
+            }
         }
     }
     return 0;
 }
-

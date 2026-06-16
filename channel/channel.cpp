@@ -16,6 +16,11 @@ std::string Channel::getName()
     return _name;
 }
 
+void Channel::setName(std::string name)
+{
+    _name = name;
+}
+
 bool Channel::isEmpty()
 {
     return (_vClient.empty());
@@ -45,7 +50,10 @@ void Channel::removeClient(Client *client, bool printMSG)
         if (*it == client)
         {
             if (printMSG)
-                broadcast(client->getNickName() + "PART" + _name, client);
+            {
+                std::string partMsg = ":" + client->getNickName() + " PART " + _name + "\r\n";
+                broadcast(partMsg, client);
+            }
             _vClient.erase(it);
             break;
         }
@@ -54,14 +62,11 @@ void Channel::removeClient(Client *client, bool printMSG)
 
 void Channel::broadcast(std::string message, Client *sender)
 {
-    std::string newMessage = ":" + sender->getNickName() + " PRIVMSG " + _name + " :" + message;
-
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
     {
         if ((*it)->getFd() != sender->getFd())
-        { 
-            send((*sender).getFd(), newMessage.c_str(), newMessage.length(), 0);
-            // (*it)->send(newMessage);
+        {
+            send((*it)->getFd(), message.c_str(), message.length(), 0);
         }
     }
 }
@@ -202,14 +207,14 @@ void Channel::kickClient(Channel &channel, Client *sender, Client *target)
 {
     if (!channel.isOperator(sender))
     {
-        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
+        std::string msg = "482 " + channel.getName() + " :You're not channel operator\r\n";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
         return;
     }
-    channel.broadcast(":" + sender->getNickName() + " KICK #" + channel._name + " " + target->getNickName(), sender);
-    removeClient(target, false);
-    removeOperator(target);
+    std::string kickMsg = ":" + sender->getNickName() + " KICK " + channel._name + " " + target->getNickName() + "\r\n";
+    channel.broadcast(kickMsg, sender);
+    channel.removeClient(target, false);
+    channel.removeOperator(target);
 }
 
 bool Channel::isRestrictedTopic()
@@ -221,35 +226,66 @@ void Channel::ChangeTopic(Channel &channel, Client *sender, std::string topic)
 {
     if (isRestrictedTopic() && !isOperator(sender))
     {
-        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = "482 " + channel.getName() + " :You're not channel operator\r\n";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
     }
-    channel.broadcast(":" + sender->getNickName() + " TOPIC #" + channel._name + " :" + topic,
-                  sender);
-    channel.setTopic(topic); 
+    std::string topicMsg = ":" + sender->getNickName() + " TOPIC " + channel._name + " :" + topic + "\r\n";
+    channel.broadcast(topicMsg, sender);
+    channel.setTopic(topic);
 }
 
 void Channel::inviteToChannel(Channel &channel,Client *sender, Client *target)
 {
     if (!channel.isOperator(sender))
     {
-        std::string msg = "482 #" + channel.getName() + " : You're not channel operator";
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = "482 " + channel.getName() + " : You're not channel operator\r\n";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
         return;
     }
     channel.inviteClient(target);
 
-    std::string msg = ":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name;
+    std::string msg = ":" + sender->getNickName() + " INVITE " + target->getNickName() + " " + channel._name + "\r\n";
     send(sender->getFd(), msg.c_str(), msg.length(), 0);
-    // target->send(":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name); 
 }
 
 void Join(Channel &channel, Client *client)
 {
     if (channel.isEmpty())
         channel.addOperator(client);
+    
+// // yahya sawb had lfunction
+//     // hadchi li gal lia AI kadiro had function
+// //"Your processChannelJoin function needs to take the clean channel name and key that I parsed, 
+//     if (_vChannelNames.size() == 0)
+//     {
+//         _vChannelNames.push_back(channelName);
+//     }
+//     else
+//     {
+//         bool found = false;
+//         for (size_t j = 0; j < _vChannelNames.size(); j++)
+//         {
+//             if (_vChannelNames[j] == channelName)
+//             {
+//                 found = true;
+//                 break;
+//             }
+//         }
+//         if (!found)
+//             _vChannelNames.push_back(channelName);
+//         else
+//             return; 
+//     }
+
+//## What to tell Yahya in one sentence:
+//decide whether to create a new channel or open an old one, 
+    //====>> here we have to alloc for all one channel <========//
+//     Channel *chan = new Channel();
+//     chan->setName(channelName);
+//     _vChannels.push_back(chan);
+    
+// //run your room security checks, and handle broadcasting the entry message to the clients."
+// chan->broadcast("JOIN " + channelName + cmd.getMessage() + "\r\n", &client);
 }
 
 bool Channel::hasClient(Client *client)
@@ -280,4 +316,24 @@ bool Channel::hasDuplicateNickName(std::string nickname)
             return true;
     }
     return false;
+}
+
+
+Channel* Server::getChannelByName(const std::string& name)
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
+    return NULL;
+}
+
+Channel* Server::getOrCreateChannel(const std::string& name)
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
+    Channel *chan = new Channel();
+    chan->setName(name);
+    _channels[name] = chan;
+    return chan;
 }
