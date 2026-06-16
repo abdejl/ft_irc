@@ -98,12 +98,12 @@ int main(int argc, char **argv)
             return 1;
         for (size_t i = 0; i < server.getClients().size(); i++)
         {
-            std::string &clientBuffer = server.getClients()[i].getBufferRef();
+            std::string &clientBuffer = server.getClients()[i]->getBufferRef();
             std::vector<std::string> lines = extractCommands(clientBuffer); 
             for (size_t j = 0; j < lines.size(); j++)
             {
                 Command cmd = parseCommand(lines[j]);
-                dispatcher.execute(server.getClients()[i], cmd, server);
+                dispatcher.execute(*server.getClients()[i], cmd, server);
             }
         }
     }

@@ -101,7 +101,7 @@ bool Server::isNickInUse(const std::string& nick)
 {
     for (size_t i = 0; i < _clients.size(); i++)
     {
-        if (_clients[i].getNickName() == nick)
+        if (_clients[i]->getNickName() == nick)
         {
             return true;
         }
@@ -113,15 +113,15 @@ Client* Server::getClientByNick(const std::string& nick)
 {
     for (size_t i = 0; i < _clients.size(); i++)
     {
-        if (_clients[i].getNickName() == nick)
+        if (_clients[i]->getNickName() == nick)
         {
-            return &_clients[i];
+            return _clients[i];
         }
     }
     return NULL;
 }
 
-void Server::addClient(const Client& client)
+void Server::addClient(Client* client)
 {
     _clients.push_back(client);
 }
@@ -138,7 +138,7 @@ std::string Client::getBuffer() const
 
 std::string Server::getBuffer(int i) const
 {
-    return _clients[i].getBuffer();
+    return _clients[i]->getBuffer();
 }
 
 std::string& Client::getBufferRef()
@@ -151,7 +151,7 @@ void Client::setBuffer(std::string buffer)
     _buffer = buffer;
 }
 
-std::vector<Client>& Server::getClients()
+std::vector<Client*>& Server::getClients()
 {
     return _clients;
 }
@@ -160,14 +160,14 @@ void    Server::FillClient(int Fd, std::string Text)
 {
     for (size_t i = 0; i < _clients.size(); i++)
     {
-        if (_clients[i].getFd() == Fd)
+        if (_clients[i]->getFd() == Fd)
         {
-            if (_clients[i].getBuffer().find("\n") != std::string::npos
-                || _clients[i].getBuffer().find("\r\n") != std::string::npos)
+            if (_clients[i]->getBuffer().find("\n") != std::string::npos
+                || _clients[i]->getBuffer().find("\r\n") != std::string::npos)
             {
-                _clients[i].setBuffer("");
+                _clients[i]->setBuffer("");
             }
-            _clients[i].setBuffer(_clients[i].getBuffer() + Text);
+            _clients[i]->setBuffer(_clients[i]->getBuffer() + Text);
             break;
         }
     }
@@ -186,9 +186,9 @@ void Server::processChannelJoin(Client &client, std::string channelName, std::st
     }
     if (chan->hasClient(&client))
         return;
-    chan->addClient(&client);
     if (chan->isEmpty())
         chan->addOperator(&client);
+    chan->addClient(&client);
     std::string joinMsg = ":" + client.getNickName() + " JOIN " + channelName + "\r\n";
     send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
     chan->broadcast(joinMsg, &client);

@@ -38,7 +38,7 @@ class Server{
 private:
     std::string _password;
     std::string _port;
-    std::vector<Client> _clients;
+    std::vector<Client*> _clients;
     std::map<std::string, Channel*> _channels;
 public:
     void setPassword(std::string pass);
@@ -48,9 +48,9 @@ public:
     std::string getPassword() const;
     bool isNickInUse(const std::string& nick);
     Client* getClientByNick(const std::string& nick);
-    void    addClient(const Client& client);
+    void    addClient(Client* client);
     void    FillClient(int Fd, std::string Text);
-    std::vector<Client>& getClients();
+    std::vector<Client*>& getClients();
     Channel* getChannelByName(const std::string& name);
     Channel* getOrCreateChannel(const std::string& name);
     void processChannelJoin(Client &client, std::string channelName, std::string key);
