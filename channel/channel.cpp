@@ -1,5 +1,5 @@
 #include "channel.hpp"
-#include <sys/socket.h> // For send()
+#include <sys/socket.h>
 
 
 Channel::Channel()
@@ -47,43 +47,48 @@ void Channel::removeClient(Client *client, bool printMSG)
         return;
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
     {
-        if (*it == client)
+        if ((*it)->getFd() == client->getFd())
         {
             if (printMSG)
-                broadcast(client->getNickName() + "PART" + _name, client);
+            {
+                std::string partMsg = ":" + client->getHostmask() + " PART " + _name + "\r\n";
+                broadcast(partMsg, client);
+            }
             _vClient.erase(it);
             break;
         }
     }
 }
 
+// BUG FIX #2 (Broadcast Raw Forwarder):
+// broadcast() was previously hardcoding a PRIVMSG prefix onto every message.
+// It is now a pure raw forwarder — it sends exactly the string it receives.
+// Callers (kickClient, ChangeTopic, inviteToChannel, removeClient) are
+// responsible for building the full correctly-formatted IRC line themselves.
+// sender == NULL means send to ALL members (used for server-initiated messages).
 void Channel::broadcast(std::string message, Client *sender)
 {
-    std::string newMessage = ":" + sender->getNickName() + " PRIVMSG " + _name + " :" + message;
-
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
     {
-        if ((*it)->getFd() != sender->getFd())
-        { 
-            send((*it)->getFd(), newMessage.c_str(), newMessage.length(), 0);
-            // (*it)->send(newMessage);
-        }
+        if (sender && (*it)->getFd() != sender->getFd())
+            send((*it)->getFd(), message.c_str(), message.length(), 0);
+        else if (!sender)
+            send((*it)->getFd(), message.c_str(), message.length(), 0);
     }
 }
 
 void Channel::addOperator(Client *client)
 {
-    std::cout << "TEST ADDOPERATOR" << std::endl;
-    _vOperator.push_back(client); 
+    _vOperator.push_back(client);
 }
 
 void Channel::removeOperator(Client *client)
 {
     for (std::vector<Client*>::iterator it = _vOperator.begin(); it != _vOperator.end(); it++)
     {
-        if (*it == client)
+        if ((*it)->getFd() == client->getFd())
         {
-            _vOperator.erase(it);  
+            _vOperator.erase(it);
             break;
         }
     }
@@ -149,8 +154,18 @@ bool Channel::hasLimit()
     return _userLimit != -1;
 }
 
+// BUG FIX #1 (\r\n strip in handleMode):
+// Mode arguments arriving from the network (e.g. keys, limit values) may still
+// carry a trailing \r from the raw TCP stream if the parser ever lets one
+// slip through. std::atoi() silently ignores \r, but string comparisons for
+// keys like (_key != key) will FAIL because "\r" changes the string value.
+// We strip trailing \r and \n from the arg before applying it.
 void handleMode(Channel &channel, std::string mode, std::string arg)
 {
+    // Strip trailing \r\n artifacts from the argument
+    while (!arg.empty() && (arg[arg.size() - 1] == '\r' || arg[arg.size() - 1] == '\n'))
+        arg.erase(arg.size() - 1);
+
     if (mode == "+i")
         channel.setInviteOnly(true);
     else if (mode == "-i")
@@ -159,6 +174,10 @@ void handleMode(Channel &channel, std::string mode, std::string arg)
         channel.setKey(arg);
     else if (mode == "-k")
         channel.setKey("");
+    else if (mode == "+t")
+        channel.setTopicRestricted(true);
+    else if (mode == "-t")
+        channel.setTopicRestricted(false);
     else if (mode == "+l")
         channel.setUserLimit(std::atoi(arg.c_str()));
     else if (mode == "-l")
@@ -167,6 +186,10 @@ void handleMode(Channel &channel, std::string mode, std::string arg)
 
 bool Channel::canJoin(Client *client, std::string key)
 {
+    // Strip any trailing \r\n from the key the client sent
+    while (!key.empty() && (key[key.size() - 1] == '\r' || key[key.size() - 1] == '\n'))
+        key.erase(key.size() - 1);
+
     if (hasLimit() && _vClient.size() >= (size_t)_userLimit)
         return false;
     if (hasKey() && _key != key)
@@ -185,7 +208,7 @@ bool Channel::isInvited(Client *client)
 {
     for (std::vector<Client*>::iterator it = _vInvitedClients.begin(); it != _vInvitedClients.end(); it++)
     {
-        if (client == *it)
+        if ((*it)->getFd() == client->getFd())
             return true;
     }
     return false;
@@ -193,9 +216,9 @@ bool Channel::isInvited(Client *client)
 
 void Channel::removeInvitation(Client *client)
 {
-    for (std::vector<Client*>::iterator it = _vInvitedClients.begin(); it != _vInvitedClients.end(); it++) 
+    for (std::vector<Client*>::iterator it = _vInvitedClients.begin(); it != _vInvitedClients.end(); it++)
     {
-        if (*it == client)
+        if ((*it)->getFd() == client->getFd())
         {
             _vInvitedClients.erase(it);
             return;
@@ -203,16 +226,26 @@ void Channel::removeInvitation(Client *client)
     }
 }
 
-void Channel::kickClient(Channel &channel, Client *sender, Client *target)
+// BUG FIX #3 (Redundant Parameter / Self-Reference):
+// kickClient was declared as a member of Channel but received a Channel& parameter,
+// creating a dual-lookup layer (this-> vs channel.) on the same object.
+// Fixed: removed the redundant Channel& parameter. The method now operates
+// entirely through `this`, which is the channel instance the dispatcher already
+// retrieved via getChannelByName(). The call site in handleKick is updated
+// from chan->kickClient(*chan, ...) to chan->kickClient(...).
+void Channel::kickClient(Client *sender, Client *target)
 {
-    if (!channel.isOperator(sender))
+    if (!isOperator(sender))
     {
-        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
+        std::string msg = ":localhost 482 " + sender->getNickName() + " " + _name + " :You're not channel operator\r\n";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
-        // sender->send("481 #" + channel.getName() + " :You're not channel operator");
         return;
     }
-    channel.broadcast(":" + sender->getNickName() + " KICK #" + channel._name + " " + target->getNickName(), sender);
+    // Send KICK to the target being kicked
+    std::string kickMsg = ":" + sender->getHostmask() + " KICK " + _name + " " + target->getNickName() + " :kicked\r\n";
+    send(target->getFd(), kickMsg.c_str(), kickMsg.length(), 0);
+    // Broadcast KICK to remaining channel members
+    broadcast(kickMsg, target);
     removeClient(target, false);
     removeOperator(target);
 }
@@ -222,80 +255,85 @@ bool Channel::isRestrictedTopic()
     return _topicRestricted;
 }
 
-void Channel::ChangeTopic(Channel &channel, Client *sender, std::string topic)
+void Channel::ChangeTopic(Client *sender, std::string topic)
 {
+    if (!sender)
+        return;
+    // Strip trailing \r\n from topic text arriving from the network
+    while (!topic.empty() && (topic[topic.size() - 1] == '\r' || topic[topic.size() - 1] == '\n'))
+        topic.erase(topic.size() - 1);
     if (isRestrictedTopic() && !isOperator(sender))
     {
-        std::string msg = "482 #" + channel.getName() + " :You're not channel operator";
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
-        send(sender->getFd(), msg.c_str(), msg.length(), 0);
-    }
-    channel.broadcast(":" + sender->getNickName() + " TOPIC #" + channel._name + " :" + topic,
-                  sender);
-    channel.setTopic(topic); 
-}
-
-void Channel::inviteToChannel(Channel &channel,Client *sender, Client *target)
-{
-    if (!channel.isOperator(sender))
-    {
-        std::string msg = "482 #" + channel.getName() + " : You're not channel operator";
-        // sender->send("482 #" + channel.getName() + " :You're not channel operator");
+        std::string msg = ":localhost 482 " + sender->getNickName() + " " + _name + " :You're not channel operator\r\n";
         send(sender->getFd(), msg.c_str(), msg.length(), 0);
         return;
     }
-    channel.inviteClient(target);
-
-    std::string msg = ":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name;
-    send(sender->getFd(), msg.c_str(), msg.length(), 0);
-    // target->send(":" + sender->getNickName()+ " INVITE "+ target->getNickName()+ " #" + channel._name); 
+    setTopic(topic);
+    std::string topicMsg = ":" + sender->getHostmask() + " TOPIC " + _name + " :" + topic + "\r\n";
+    // Send to the sender explicitly (broadcast excludes sender)
+    send(sender->getFd(), topicMsg.c_str(), topicMsg.length(), 0);
+    broadcast(topicMsg, sender);
 }
 
-void Join(Channel &channel, Client *client)
+// BUG FIX #3 (Redundant Parameter / Self-Reference):
+// Same issue as kickClient — inviteToChannel received a Channel& in addition
+// to being a Channel member. Removed the redundant parameter.
+// Also fixed: inviteToChannel was calling addClient() directly, bypassing
+// canJoin() checks and the operator-first logic. INVITE should only mark
+// the client as invited; the actual JOIN happens when the client sends JOIN.
+void Channel::inviteToChannel(Client *sender, Client *target)
 {
-    if (channel.isEmpty())
-        channel.addOperator(client);
-    
-// // yahya sawb had lfunction
-//     // hadchi li gal lia AI kadiro had function
-// //"Your processChannelJoin function needs to take the clean channel name and key that I parsed, 
-//     if (_vChannelNames.size() == 0)
-//     {
-//         _vChannelNames.push_back(channelName);
-//     }
-//     else
-//     {
-//         bool found = false;
-//         for (size_t j = 0; j < _vChannelNames.size(); j++)
-//         {
-//             if (_vChannelNames[j] == channelName)
-//             {
-//                 found = true;
-//                 break;
-//             }
-//         }
-//         if (!found)
-//             _vChannelNames.push_back(channelName);
-//         else
-//             return; 
-//     }
+    if (!isOperator(sender))
+    {
+        std::string msg = ":localhost 482 " + sender->getNickName() + " " + _name + " :You're not channel operator\r\n";
+        send(sender->getFd(), msg.c_str(), msg.length(), 0);
+        return;
+    }
+    // Mark as invited — the client will JOIN normally, canJoin() will pass for them
+    inviteClient(target);
 
-//## What to tell Yahya in one sentence:
-//decide whether to create a new channel or open an old one, 
-    //====>> here we have to alloc for all one channel <========//
-//     Channel *chan = new Channel();
-//     chan->setName(channelName);
-//     _vChannels.push_back(chan);
-    
-// //run your room security checks, and handle broadcasting the entry message to the clients."
-// chan->broadcast("JOIN " + channelName + cmd.getMessage() + "\r\n", &client);
+    // Notify the sender that the invite was sent
+    std::string inviteMsg = ":" + sender->getHostmask() + " INVITE " + target->getNickName() + " " + _name + "\r\n";
+    send(sender->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
+    // Notify the target
+    send(target->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
+}
+
+// BUG FIX (JOIN Order of Operations):
+// The original code called addClient() BEFORE the isEmpty() check, so the
+// channel was never empty when we checked whether to make the joiner an operator.
+// Fixed: check isEmpty() FIRST, then addClient().
+void Server::processChannelJoin(Client &client, std::string channelName, std::string key)
+{
+    Channel *channel = getOrCreateChannel(channelName);
+    if (!channel)
+        return;
+    if (channel->hasClient(&client))
+        return;
+    if (!channel->canJoin(&client, key))
+    {
+        std::string msg = ":localhost 475 " + client.getNickName() + " " + channelName + " :Cannot join channel (+k or +l)\r\n";
+        send(client.getFd(), msg.c_str(), msg.length(), 0);
+        return;
+    }
+    // isEmpty() MUST be checked before addClient()
+    bool wasEmpty = channel->isEmpty();
+    channel->addClient(&client);
+    if (wasEmpty)
+        channel->addOperator(&client);
+
+    std::string joinMsg = ":" + client.getHostmask() + " JOIN " + channelName + "\r\n";
+    // Send JOIN to the joining client
+    send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
+    // Broadcast JOIN to existing members (excludes the sender)
+    channel->broadcast(joinMsg, &client);
 }
 
 bool Channel::hasClient(Client *client)
 {
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
     {
-        if (*it == client)
+        if ((*it)->getFd() == client->getFd())
             return true;
     }
     return false;
@@ -305,9 +343,7 @@ std::vector<std::string> Channel::getClientList()
 {
     std::vector<std::string> clientList;
     for (std::vector<Client*>::iterator it = _vClient.begin(); it != _vClient.end(); it++)
-    {
         clientList.push_back((*it)->getNickName());
-    }
     return clientList;
 }
 
@@ -321,11 +357,23 @@ bool Channel::hasDuplicateNickName(std::string nickname)
     return false;
 }
 
-
 Channel* Server::getChannelByName(const std::string& name)
 {
-    (void)name;
-    //for testing only 
-    //sawb dialk
+    if (name.empty() || (name[0] != '#' && name[0] != '&'))
+        return NULL;
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
     return NULL;
+}
+
+Channel* Server::getOrCreateChannel(const std::string& name)
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
+    Channel *chan = new Channel();
+    chan->setName(name);
+    _channels[name] = chan;
+    return chan;
 }

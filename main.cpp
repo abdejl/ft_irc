@@ -8,6 +8,14 @@
 #include "parsing/cmdDispatcher.hpp"
 #include "server/server.hpp"
 
+static std::string trimCRLF(const std::string &str)
+{
+    std::string result = str;
+    while (!result.empty() && (result[result.size() - 1] == '\r' || result[result.size() - 1] == '\n'))
+        result.erase(result.size() - 1);
+    return result;
+}
+
 std::vector<std::string> extractCommands(std::string &buffer)
 {
     std::vector<std::string> commands;
@@ -54,7 +62,7 @@ Command parseCommand(const std::string &line)
     {
         if (line[i] == ':')
         {
-            messageToBuild = line.substr(i + 1);
+            messageToBuild = trimCRLF(line.substr(i + 1));
             break;
         }
         std::string param;
@@ -80,7 +88,6 @@ int main(int argc, char **argv)
         std::cout << "Usage: ./ircserv <port> <password>" << std::endl;
         return 1;
     }
-    Client              client;
     Server              server;
     commandDispatcher   dispatcher;
 

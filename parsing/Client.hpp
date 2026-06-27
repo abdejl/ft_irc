@@ -32,6 +32,7 @@ public:
     std::string getRealName() const;
     bool checkIsValidNickname(const std::string& nick);
     std::string& getBufferRef();
+    std::string getHostmask() const;
 };
 
 class Server{
@@ -40,6 +41,7 @@ private:
     std::string _port;
     std::vector<Client*> _clients;
     std::map<std::string, Channel*> _channels;
+
 public:
     void setPassword(std::string pass);
     void setPort(std::string port);
@@ -49,6 +51,7 @@ public:
     bool isNickInUse(const std::string& nick);
     Client* getClientByNick(const std::string& nick);
     void    addClient(Client* client);
+    void    removeClient(int fd);
     void    FillClient(int Fd, std::string Text);
     std::vector<Client*>& getClients();
     Channel* getChannelByName(const std::string& name);

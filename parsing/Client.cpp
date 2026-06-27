@@ -2,7 +2,7 @@
 #include "../channel/channel.hpp"
 #include <sys/socket.h>
 
-Client::Client() : _isAuthenticated(false), _isRegistered(false)
+Client::Client() : _fd(-1), _isAuthenticated(false), _isRegistered(false)
 {
 
 }
@@ -123,7 +123,21 @@ Client* Server::getClientByNick(const std::string& nick)
 
 void Server::addClient(Client* client)
 {
+    std::cout << "HELLO" << std::endl;
     _clients.push_back(client);
+}
+
+void Server::removeClient(int fd)
+{
+    for (std::vector<Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+    {
+        if ((*it)->getFd() == fd)
+        {
+            delete *it;
+            _clients.erase(it);
+            return;
+        }
+    }
 }
 std::string Client::getRealName() const
 {
@@ -133,6 +147,11 @@ std::string Client::getRealName() const
 std::string Client::getBuffer() const
 {
     return _buffer;
+}
+
+std::string Client::getHostmask() const
+{
+    return _nickName + "!" + _userName + "@localhost";
 }
 
 
@@ -173,23 +192,23 @@ void    Server::FillClient(int Fd, std::string Text)
     }
 }
 
-void Server::processChannelJoin(Client &client, std::string channelName, std::string key)
-{
-    Channel *chan = getOrCreateChannel(channelName);
-    if (!chan)
-        return;
-    if (!chan->canJoin(&client, key))
-    {
-        std::string err = "475 " + client.getNickName() + " " + channelName + " :Cannot join channel (+k or +l)\r\n";
-        send(client.getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
-    if (chan->hasClient(&client))
-        return;
-    if (chan->isEmpty())
-        chan->addOperator(&client);
-    chan->addClient(&client);
-    std::string joinMsg = ":" + client.getNickName() + " JOIN " + channelName + "\r\n";
-    send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
-    chan->broadcast(joinMsg, &client);
-}
+// void Server::processChannelJoin(Client &client, std::string channelName, std::string key)
+// {
+//     Channel *chan = getOrCreateChannel(channelName);
+//     if (!chan)
+//         return;
+//     if (!chan->canJoin(&client, key))
+//     {
+//         std::string err = "475 " + client.getNickName() + " " + channelName + " :Cannot join channel (+k or +l)\r\n";
+//         send(client.getFd(), err.c_str(), err.length(), 0);
+//         return;
+//     }
+//     if (chan->hasClient(&client))
+//         return;
+//     if (chan->isEmpty())
+//         chan->addOperator(&client);
+//     chan->addClient(&client);
+//     std::string joinMsg = ":" + client.getNickName() + " JOIN " + channelName + "\r\n";
+//     send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
+//     chan->broadcast(joinMsg, &client);
+// }

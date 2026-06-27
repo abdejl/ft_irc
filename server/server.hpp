@@ -11,6 +11,7 @@
 #include <vector>
 #include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include "../parsing/Client.hpp"
 
 

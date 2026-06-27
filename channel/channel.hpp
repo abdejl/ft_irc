@@ -7,15 +7,6 @@
 #include <cstdlib>
 #include "../parsing/Client.hpp"
 
-
-// class Client
-// {
-//     public:
-//         int socket_fd;
-//         std::string getNickName();
-//         void send(std::string Message);
-// };
-
 class Channel
 {
     private:
@@ -75,18 +66,17 @@ class Channel
         void inviteClient(Client *client);
         void removeInvitation(Client *client);
 
-        // commands
-        void kickClient(Channel &channel, Client *sender, Client *target);
-        void ChangeTopic(Channel &channel, Client *sender, std::string topic);
-        void inviteToChannel(Channel &channel, Client *sender, Client *target);
+        // BUG FIX #3: Removed redundant Channel& parameter from both methods.
+        // They are member functions — they already have access to `this`.
+        void kickClient(Client *sender, Client *target);
+        void ChangeTopic(Client *sender, std::string topic);
+        void inviteToChannel(Client *sender, Client *target);
 
         // utils
         std::vector<std::string> getClientList();
 };
 
-// non-member functions
+// non-member helper — applies a single mode string to a channel
 void handleMode(Channel &channel, std::string mode, std::string arg);
-void Join(Channel &channel, Client *client);
 
 #endif
-
