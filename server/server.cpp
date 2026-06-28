@@ -94,6 +94,7 @@ int CoreServer::Receive(Server &server)
             if (!bytes_read)
             {
                 std::cout << "ctrl+C\n";
+                server.removeClient(Events[i].fd);
                 close(Events[i].fd);
                 Events.erase(Events.begin() + i);
                 i--;
