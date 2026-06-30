@@ -1,4 +1,5 @@
 #include "cmdDispatcher.hpp"
+#include "Client.hpp"
 #include "parser.hpp"
 #include "../channel/channel.hpp"
 #include <sys/socket.h>
@@ -38,7 +39,13 @@ void commandDispatcher::execute(Client &client, const Command &cmd, Server &serv
         else if (name == "INVITE")
             handleInvite(client, cmd, server);
         else if (name == "MODE")
-            handleMode(client, cmd, server);
+        {
+            Client *target = NULL;
+            if (cmd.getParams().size() > 2)
+                target =server.getClientByNick(cmd.getParams()[2]);
+
+            handleMode(client, cmd, server, target);
+        }
         else if (name == "PART")
             handlePart(client, cmd, server);
     }
@@ -359,7 +366,7 @@ void commandDispatcher::handleInvite(Client &client, const Command &cmd, Server 
     chan->inviteToChannel(&client, target);
 }
 
-void commandDispatcher::handleMode(Client &client, const Command &cmd, Server &server)
+void commandDispatcher::handleMode(Client &client, const Command &cmd, Server &server, Client *ptarget)
 {
     if (cmd.getParams().empty())
     {
@@ -413,7 +420,7 @@ void commandDispatcher::handleMode(Client &client, const Command &cmd, Server &s
     // BUG FIX #1: handleMode() (the global helper in channel.cpp) now strips
     // trailing \r\n from modeArg before applying it, so the channel state
     // is never corrupted by network delimiter artifacts.
-    ::handleMode(*chan, mode, modeArg);
+    ::handleMode(*chan, mode, modeArg, ptarget);
     std::string broadcastMsg = ":" + client.getHostmask() + " MODE " + target + " " + mode;
     if (!modeArg.empty())
         broadcastMsg += " " + modeArg;

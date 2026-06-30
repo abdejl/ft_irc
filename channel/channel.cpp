@@ -160,9 +160,9 @@ bool Channel::hasLimit()
 // slip through. std::atoi() silently ignores \r, but string comparisons for
 // keys like (_key != key) will FAIL because "\r" changes the string value.
 // We strip trailing \r and \n from the arg before applying it.
-void handleMode(Channel &channel, std::string mode, std::string arg)
+void handleMode(Channel &channel, std::string mode, std::string arg, Client *target)
 {
-    // Strip trailing \r\n artifacts from the argument
+    // remove \r\n
     while (!arg.empty() && (arg[arg.size() - 1] == '\r' || arg[arg.size() - 1] == '\n'))
         arg.erase(arg.size() - 1);
 
@@ -182,6 +182,16 @@ void handleMode(Channel &channel, std::string mode, std::string arg)
         channel.setUserLimit(std::atoi(arg.c_str()));
     else if (mode == "-l")
         channel.setUserLimit(-1);
+    else if (mode == "+o")
+    {
+        if (target)
+            channel.addOperator(target);
+    }
+    else if (mode == "-o")
+    {
+        if (target)
+            channel.removeOperator(target);
+    }
 }
 
 bool Channel::canJoin(Client *client, std::string key)

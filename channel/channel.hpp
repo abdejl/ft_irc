@@ -64,19 +64,20 @@ class Channel
 
         // invitations
         void inviteClient(Client *client);
-        void removeInvitation(Client *client);
+        void inviteToChannel(Client *sender, Client *target);
+       void removeInvitation(Client *client);
 
         // BUG FIX #3: Removed redundant Channel& parameter from both methods.
         // They are member functions — they already have access to `this`.
         void kickClient(Client *sender, Client *target);
         void ChangeTopic(Client *sender, std::string topic);
-        void inviteToChannel(Client *sender, Client *target);
-
         // utils
         std::vector<std::string> getClientList();
 };
 
+void handleMode(Channel &channel, std::string mode, std::string arg, Client *target);
 // non-member helper — applies a single mode string to a channel
-void handleMode(Channel &channel, std::string mode, std::string arg);
+// void handleMode(Channel &channel, std::string mode, std::string arg);
 
+// void handleMode(Channel &channel, std::string mode, std::string arg, Client *target);
 #endif

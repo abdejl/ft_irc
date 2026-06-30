@@ -17,7 +17,7 @@ public:
     void handleTopic(Client &client, const Command &cmd, Server &server);
     void handleKick(Client &client, const Command &cmd, Server &server);
     void handleInvite(Client &client, const Command &cmd, Server &server);
-    void handleMode(Client &client, const Command &cmd, Server &server);
+    void handleMode(Client &client, const Command &cmd, Server &server, Client *target);    
     void handlePart(Client &client, const Command &cmd, Server &server);
     void tryCompleteRegistration(Client &client);
 };
